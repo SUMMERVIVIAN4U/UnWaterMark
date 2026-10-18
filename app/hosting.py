@@ -6,6 +6,8 @@ from fractions import Fraction
 @dataclass(frozen=True)
 class HostingPolicy:
     enabled: bool=False
+    retention_hours: int=24
+    cleanup_interval_seconds: int=60
     max_bytes: int=25*1024*1024
     max_seconds: int=30
     max_edge: int=1280

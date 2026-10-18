@@ -12,6 +12,7 @@ from .media import validate_name,inspect_video,validate_mask,MAX_BYTES
 from .jobs import JobManager,BASE
 from .normalization import prepare_upload,POLICY
 from .hosting import HostingPolicy
+from .retention import Retention,RetentionRequests
 ROOT=Path(os.environ.get('VIDEO_REMOVER_RUNTIME',BASE/'runtime')).resolve()
 
 def create_app(root=ROOT):
@@ -20,8 +21,12 @@ def create_app(root=ROOT):
     @asynccontextmanager
     async def lifespan(app):
         app.state.jobs=JobManager(root)
-        yield
-        app.state.jobs.close()
+        app.state.retention=Retention(app.state.jobs,seconds=hosted.retention_hours*3600,interval=hosted.cleanup_interval_seconds) if hosted.enabled else None
+        if app.state.retention:app.state.retention.start()
+        try:yield
+        finally:
+            if app.state.retention:app.state.retention.close()
+            app.state.jobs.close()
     app=FastAPI(lifespan=lifespan)
     @app.middleware('http')
     async def same_origin(request,call_next):
@@ -89,7 +94,7 @@ def create_app(root=ROOT):
                     size+=len(chunk);validate_name(name,size)
                     if hosted.enabled and size>hosted.max_bytes:raise ValueError('试用站视频不能超过25 MiB')
                     out.write(chunk)
-            m=await run_in_threadpool(prepare_upload,source,inspect_video);m.update(id=id,name=name,original_url=f'/api/uploads/{id}/original',url=f'/api/uploads/{id}/video');(p/'upload.json').write_text(json.dumps(m));return m
+            m=await run_in_threadpool(prepare_upload,source,inspect_video);m.update(id=id,name=name,created_at=time.time(),original_url=f'/api/uploads/{id}/original',url=f'/api/uploads/{id}/video');(p/'upload.json').write_text(json.dumps(m));return m
         except Exception:
             import shutil
             shutil.rmtree(p);raise
@@ -143,12 +148,13 @@ def create_app(root=ROOT):
             html=html.replace('选择本地快速修补或研究模型处理','使用服务器快速修补').replace('最大 100 MiB','最大 25 MiB · 30 秒 · 长边≤1280 · 总像素≤720p')
             html=html.replace('<option value="propainter">ProPainter · 研究模式</option>','')
             html=re.sub(r'<p class="hint">ProPainter 研究模式：.*?</p>','<p class="hint">试用站仅开快速模式：SDR 8位、1–60 fps、最多一条音轨。VFR 转30 fps，自动处理常见旋转与音画偏移。一次处理一个任务。文件上传到香港服务器；受邀用户共享素材、结果和任务记录，请勿上传敏感内容。</p>',html)
-            return html.replace('素材与处理结果保存在本机。','素材与结果保存在香港服务器，受邀用户共享任务记录；文件不会自动删除。')
+            return html.replace('素材与处理结果保存在本机。','素材与结果保存在香港服务器，受邀用户共享任务记录；任务结束后保留24小时，到期自动清理；未提交的上传也保留24小时。')
     if hosted.enabled:
         @app.get('/app.js',include_in_schema=False)
         def hosted_script():return FileResponse(BASE/'web/app.js',media_type='application/javascript')
         @app.get('/style.css',include_in_schema=False)
         def hosted_style():return FileResponse(BASE/'web/style.css',media_type='text/css')
     elif (BASE/'web').exists():app.mount('/',StaticFiles(directory=BASE/'web',html=True),name='web')
+    if hosted.enabled:app.add_middleware(RetentionRequests,state=app.state)
     return app
 app=create_app()
