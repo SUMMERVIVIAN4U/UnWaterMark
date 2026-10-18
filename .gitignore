@@ -1,0 +1,21 @@
+# Local environments and generated/private media
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.DS_Store
+.env
+.env.*
+!.env.example
+runtime/
+evidence/
+model-trial/
+*.log
+*.mp4
+*.mov
+*.MOV
+*.m4v
+*.pth
+*.pt
+*.partial

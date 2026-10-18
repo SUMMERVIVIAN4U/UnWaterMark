@@ -1,0 +1,3 @@
+[submodule "vendor/ProPainter"]
+	path = vendor/ProPainter
+	url = https://github.com/sczhou/ProPainter.git

@@ -1,0 +1,29 @@
+[
+  {
+    "name": "ProPainter.pth",
+    "source_url": "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/ProPainter.pth",
+    "download_api": "https://api.github.com/repos/sczhou/ProPainter/releases/assets/124499582",
+    "bytes": 157780510,
+    "sha256": "12c070c4b48f374c91d8a2a17851140b85c159621080989f9e191bbc18bd6591",
+    "state_dict_keys": 216,
+    "validation": "official release size matched; torch weights_only load passed; no publisher digest provided"
+  },
+  {
+    "name": "raft-things.pth",
+    "source_url": "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/raft-things.pth",
+    "download_api": "https://api.github.com/repos/sczhou/ProPainter/releases/assets/124354693",
+    "bytes": 21108000,
+    "sha256": "fcfa4125d6418f4de95d84aec20a3c5f4e205101715a79f193243c186ac9a7e1",
+    "state_dict_keys": 179,
+    "validation": "official release size matched; torch weights_only load passed; no publisher digest provided"
+  },
+  {
+    "name": "recurrent_flow_completion.pth",
+    "source_url": "https://github.com/sczhou/ProPainter/releases/download/v0.1.0/recurrent_flow_completion.pth",
+    "download_api": "https://api.github.com/repos/sczhou/ProPainter/releases/assets/124499457",
+    "bytes": 20348681,
+    "sha256": "22939a1a7900da878dbe1ccd011d646b1bfb30b8290039d8ff0e0c2fefbfd283",
+    "state_dict_keys": 74,
+    "validation": "official release size matched; torch weights_only load passed; no publisher digest provided"
+  }
+]
