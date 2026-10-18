@@ -1,0 +1,46 @@
+[Unit]
+Description=UnWaterMark invited trial
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=unwatermark
+Group=unwatermark
+WorkingDirectory=/opt/unwatermark/current
+Environment=VIDEO_REMOVER_RUNTIME=/var/lib/unwatermark
+Environment=VIDEO_REMOVER_HOSTED=1
+Environment=VIDEO_REMOVER_HOST=unwatermark.pure-diet.com
+Environment=PATH=/opt/unwatermark/bin:/opt/unwatermark/venv/bin:/usr/bin:/bin
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+Environment=MPLCONFIGDIR=/var/lib/unwatermark/matplotlib
+ExecStart=/opt/unwatermark/venv/bin/python -m uvicorn app.server:app --host 127.0.0.1 --port 8768 --proxy-headers --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+KillMode=control-group
+MemoryHigh=450M
+MemoryMax=600M
+MemorySwapMax=0
+CPUQuota=100%
+CPUWeight=20
+TasksMax=128
+LimitFSIZE=268435456
+Nice=10
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/unwatermark
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

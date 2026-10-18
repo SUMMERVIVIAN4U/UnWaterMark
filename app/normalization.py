@@ -7,6 +7,7 @@ import subprocess
 from fractions import Fraction
 from pathlib import Path
 from .media import inspect_video, MAX_BYTES
+from .hosting import HostingPolicy
 
 POLICY = dict(version=1, vfr_target_fps=30, fps_range=[1,120], video='H.264 8-bit yuv420p MP4, CFR, square pixels, zero video start', audio='Zero-based AAC; preserve relative offset by trimming pre-video samples or padding silence', rotation_degrees=[0,90,180,270], hdr=False, max_audio_streams=1, max_bytes=MAX_BYTES, extensions=['mp4','mov','m4v'], geometry='No arbitrary downscale; correct SAR and pad each odd edge by at most one pixel', timeouts_seconds=dict(probe=180,transcode=180))
 
@@ -41,6 +42,7 @@ def prepare_upload(path, inspector=inspect_video):
         if len(videos)!=1:raise ValueError('仅支持包含一条视频流的文件')
         if len(audio)>1:raise ValueError('暂只支持单音轨视频，请先选择一个音轨导出')
         s=videos[0]
+        hosted=HostingPolicy.from_env();hosted.check_stream(s)
         if s.get('color_transfer') in {'smpte2084','arib-std-b67'} or any(d.get('side_data_type') in {'Mastering display metadata','Content light level metadata','DOVI configuration record'} for d in s.get('side_data_list',[])):
             raise ValueError('暂不支持 HDR 视频，请先导出 SDR 8 位版本')
         pix=s.get('pix_fmt','')
@@ -80,6 +82,7 @@ def prepare_upload(path, inspector=inspect_video):
         if audio and abs(a_start-start)>.001:reasons.append('保留音画相对偏移：裁剪视频开始前音频或补静音')
         if s.get('codec_name')!='h264' or pix!='yuv420p':reasons.append('转为浏览器兼容 H.264 / yuv420p')
         if audio and audio[0].get('codec_name')!='aac':reasons.append('音频转为 AAC')
+        hosted.check_stream(dict(width=max(2,round(w*float(sar))),height=h,duration=times[-1]-start+last_duration,avg_frame_rate=str(target)))
         original_sha=sha(path)
         source=dict(width=w,height=h,codec=s.get('codec_name'),pixel_format=pix,fps=float(rate or declared),vfr=vfr,video_start=start,audio_start=a_start if audio else None,audio_count=len(audio),sample_aspect_ratio=str(sar),rotation=rot,presentation_duration=times[-1]-start+last_duration,last_frame_duration=last_duration)
         commands=[];working=path
@@ -103,6 +106,7 @@ def prepare_upload(path, inspector=inspect_video):
             meta=inspector(working)
             if abs(meta['duration']-duration)>1/float(target)+.002:raise ValueError('规范化后视频时长校验失败')
         else:meta=inspector(path)
+        hosted.check_working(meta)
         meta.update(working_file=working.name,normalization=dict(applied=bool(reasons),reasons=reasons,warnings=warnings,source=source,working=dict(width=meta['width'],height=meta['height'],fps=meta['fps'],duration=meta['duration']),original_sha256=original_sha,working_sha256=sha(working)))
         # Stored locally for lineage/debugging; never expose private filesystem paths in API metadata.
         (path.parent/'preparation.json').write_text(json.dumps(dict(normalization=meta['normalization'],commands=commands),ensure_ascii=False,indent=2))

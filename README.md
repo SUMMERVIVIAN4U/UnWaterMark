@@ -64,3 +64,5 @@ git submodule update --init vendor/ProPainter
 商用请联系 [SUMMERVIVIAN4U](https://github.com/SUMMERVIVIAN4U)，可通过 Issue 发起不含机密的咨询。ProPainter 的商业许可需另向上游取得；本项目授权不替代第三方许可，也不自动覆盖未获商业再许可的社区贡献。[第三方说明](THIRD_PARTY_NOTICES.md)
 
 本项目独立开发，不隶属于任何同名在线服务。
+
+受邀服务器试用部署见 [部署说明](deploy/README.md)。服务器模式会上传素材到服务器，受邀用户共享工作区；本地运行不受影响。

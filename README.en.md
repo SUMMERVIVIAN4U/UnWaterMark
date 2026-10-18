@@ -64,3 +64,5 @@ git submodule update --init vendor/ProPainter
 Contact [SUMMERVIVIAN4U](https://github.com/SUMMERVIVIAN4U) for commercial inquiries; a public Issue without confidential details is a starting point. ProPainter requires separate commercial permission from its upstream rights holders. This project's permission does not replace third-party licenses or automatically cover community contributions without commercial relicensing rights. [Third-party notices (Chinese)](THIRD_PARTY_NOTICES.md)
 
 Independently developed; not affiliated with any online service of the same name.
+
+For a password-protected shared trial, see [deployment notes](deploy/README.md). Hosted mode uploads footage to the server and shares the workspace among invited users; local mode is unchanged.
