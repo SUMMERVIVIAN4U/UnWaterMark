@@ -13,10 +13,11 @@ const {chromium}=require('playwright-core');const assert=require('node:assert/st
   await page.mouse.move(box.x+15,box.y+15);await page.mouse.down();await page.mouse.move(box.x+40,box.y+40);await page.mouse.up();
   await page.locator('#submit-full').click();await page.waitForFunction(()=>job?.status==='succeeded'||job?.status==='failed',undefined,{polling:300});
   const job=await page.evaluate(()=>window.eval('job'));assert.equal(job.status,'succeeded',job.error);
+  assert.equal(await page.locator('#preview-badge').isVisible(),true);
   assert.ok((await page.locator('#result-video').getAttribute('src')).endsWith('/preview'));
   assert.equal((await a.request.get(base+job.result_url)).status(),403);
   await page.locator('#export-password').fill('incorrect');await page.locator('#unlock-export').click();await page.waitForFunction(()=>document.getElementById('export-message').textContent.includes('不正确'));
-  await page.locator('#export-password').fill(process.env.EXPORT_TEST_PASSWORD||'browser-test-password');await page.locator('#unlock-export').click();await page.waitForFunction(()=>exportUnlocked);
+  await page.locator('#export-password').fill(process.env.EXPORT_TEST_PASSWORD||'browser-test-password');await page.locator('#unlock-export').click();await page.waitForFunction(()=>exportUnlocked);assert.equal(await page.locator('#preview-badge').isVisible(),false);
   assert.equal((await a.request.get(base+job.result_url,{headers:{Range:'bytes=0-15'}})).status(),206);
   const other=await b.newPage();await other.goto(base);await other.waitForFunction(()=>csrf!==null);
   assert.deepEqual((await (await b.request.get(base+'/api/jobs')).json()).jobs,[]);

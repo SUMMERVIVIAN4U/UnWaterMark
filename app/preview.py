@@ -4,10 +4,10 @@ from pathlib import Path
 from PIL import Image,ImageDraw
 from fastapi import HTTPException
 _LOCK=threading.Lock()
-SCALE='scale=480:480:force_original_aspect_ratio=decrease:force_divisible_by=2'
+SCALE="scale=w='min(1280,iw)':h='min(1280,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2"
 
 def make_preview(folder):
-    folder=Path(folder);output=folder/'preview-v2.mp4'
+    folder=Path(folder);output=folder/'preview-v3.mp4'
     if output.is_file():return output
     if not _LOCK.acquire(blocking=False):raise HTTPException(429,'正在准备预览，请稍后重试')
     try:
@@ -20,7 +20,7 @@ def make_preview(folder):
             ImageDraw.Draw(label).text((5,4),'PREVIEW',fill=(255,255,255,220))
             overlay.alpha_composite(label,(max(0,w-100),8))
             overlay.save(temp/'mark.png')
-            subprocess.run(['ffmpeg','-v','error','-y','-threads','1','-i',str(folder/'result.mp4'),'-i',str(temp/'mark.png'),'-filter_complex_threads','1','-filter_complex',f'[0:v]{SCALE}[v];[v][1:v]overlay=0:0,format=yuv420p[out]','-map','[out]','-an','-t','10','-c:v','libx264','-threads','1','-preset','ultrafast','-crf','28','-movflags','+faststart',str(temp/'preview.mp4')],check=True,stderr=subprocess.PIPE,timeout=30)
+            subprocess.run(['ffmpeg','-v','error','-y','-threads','1','-i',str(folder/'result.mp4'),'-i',str(temp/'mark.png'),'-filter_complex_threads','1','-filter_complex',f'[0:v]{SCALE}[v];[v][1:v]overlay=0:0,format=yuv420p[out]','-map','[out]','-an','-t','10','-c:v','libx264','-threads','1','-preset','ultrafast','-crf','20','-movflags','+faststart',str(temp/'preview.mp4')],check=True,stderr=subprocess.PIPE,timeout=30)
             (temp/'preview.mp4').replace(output)
         return output
     except (subprocess.SubprocessError,OSError) as exc:
