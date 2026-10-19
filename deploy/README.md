@@ -1,13 +1,29 @@
-# Invited trial deployment
+# Registration-free private browser trial
 
-Opt-in hosted mode is intended for trusted users sharing one workspace. It is not a multi-tenant service. The example domain must be changed for another deployment.
+Hosted mode uses server-side browser sessions: no registration or entrance password, only the current browser's uploads/jobs/media are accessible. A shared export password unlocks that browser's clean results for one hour. Before unlocking, users receive a marked, silent preview up to 3 seconds at 480 pixels maximum edge. This is an export gate, not DRM. Changing browser or clearing cookies loses access. A shared device/browser profile shares an identity; server operators retain disk access.
 
-Use a dedicated unprivileged account and runtime directory, recent FFmpeg/FFprobe (8.1 tested), and `requirements-server.txt` in a virtual environment. Point `/opt/unwatermark/current` to an immutable source release. Install the unit and reverse proxy examples only after adapting paths, obtaining a valid TLS certificate, creating an Nginx-readable htpasswd file and testing `nginx -t`. Never store passwords or private keys in Git.
+Use a dedicated unprivileged account, a recent FFmpeg/FFprobe (8.1 tested), `requirements-server.txt` in a virtual environment and an immutable release at `/opt/unwatermark/current`. Keep Uvicorn on loopback, trust proxy headers only from loopback, and use TLS. The example domain/paths must be adapted. No Nginx Basic Auth is needed after the new application authorization is verified. HTTP only redirects to HTTPS or serves ACME challenges.
 
-All routes, including media, docs and APIs, must be protected by the TLS proxy; Uvicorn listens only on loopback. Only loopback proxy forwarding is trusted. HTTP serves ACME challenges and redirects to HTTPS. Basic Authentication gives invited users access to ALL shared uploads and jobs; do not share credentials with untrusted users. Browser Basic Authentication has no application logout button; close the browser session to clear cached credentials as supported by your browser.
+Before starting hosted mode, create `/var/lib/unwatermark/export-password.json` owned by the service user, mode 600. Generate it without exposing a password in shell arguments:
 
-Hosted limits: fast only,25MiB uploads,30seconds,1280 maximum edge,921600pixels,1–60fps,one preparation/active job at a time. Runtime admission stops at1.5GiB to reserve512MiB within a2GiB operating budget; minimum5GiB disk free. These admission checks are not a filesystem quota. systemd caps memory600MiB,CPU one core,128tasks and256MiB per file. Existing local mode remains unchanged when VIDEO_REMOVER_HOSTED is absent.
+```python
+# Run from the source directory using the service virtual environment.
+import getpass,json,os
+from pathlib import Path
+from app.sessions import password_record
+path=Path('/var/lib/unwatermark/export-password.json')
+password=getpass.getpass('Shared export password: ')
+assert len(password)>=12, 'Use a strong shared password'
+fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+with os.fdopen(fd,'w') as f:json.dump(password_record(password),f)
+```
 
-Hosted mode automatically deletes terminal jobs and their outputs 24 hours after completion/failure/cancellation, checking every 60 seconds. Unsubmitted uploads expire 24 hours after upload; legacy timestamps fall back to upload metadata mtime. Source files remain while any retained job references them. Active/queued jobs and in-flight HTTP requests (including downloads) are protected. Expired job records disappear from history. Administrators should still monitor disk usage. Local mode does not enable automatic deletion. If the OS kills the service at its resource ceiling, incomplete tasks are reported interrupted on restart. Avoid broad test suites on tiny shared production servers; use a bounded synthetic smoke test for upload→mask→job→poll→download and rejected requests.
+The default password path is under runtime; `VIDEO_REMOVER_EXPORT_PASSWORD_FILE` can override it. Missing configuration prevents hosted startup. SQLite stores token hashes, owners, CSRF tokens and expiry, with 30-day identities, one-hour export grants and persistent request limits. Password records use salted PBKDF2-HMAC-SHA256 (600,000 iterations). Restart after changing the password; existing one-hour export grants remain valid until expiry. Never commit passwords, session databases, keys, real footage or browser traces.
 
-After deployment verify unauthenticated401 on pages/API/media; authenticated success; exact-host and same-origin checks; engine/size/duration/queue guards; real output full decode; cert renewal and existing unrelated sites. Keep the old release/config for rollback. To roll back, stop the app, restore the previous release symlink and site configuration, validate Nginx then reload. Do not delete runtime when rolling back.
+Anyone can upload/process without the export password, so compute and storage are public within the configured admission limits. Limits: fast only, 25 MiB, 30 seconds, 1280 maximum edge, 921600 pixels, 1–60 fps, one preparation/active job at a time. Admission stops at 1.5 GiB runtime usage, reserving 512 MiB within a 2 GiB operating budget; minimum 5 GiB disk free. These are admission checks, not filesystem quotas. systemd caps memory at 600 MiB and CPU at one core. Session bootstrap is limited to 30 new identities/IP/day and 5000 active identities; export attempts to 5/minute per IP and identity. Existing local mode is unchanged when VIDEO_REMOVER_HOSTED is absent.
+
+Terminal jobs expire 24 hours after completion/failure/cancellation, checked every 60 seconds. Unsubmitted uploads expire after 24 hours. Sources stay while referenced by retained jobs. Active/queued jobs and in-flight requests/downloads are protected. Legacy records without owner_id are inaccessible; do not assign shared legacy records to arbitrary sessions. They expire under the existing policy. Runtime and media remain on the server. Session identity expiry is separate from media retention.
+
+Upgrade behind the old Basic Auth protection first. Verify two independent HTTPS clients: public home, session issuance, upload, masked job, marked preview, wrong/correct export password, ownership checks on every endpoint and byte range. Then remove Basic Auth and recheck. Test exact host, CSRF, admission limits, output decode, TLS renewal and unrelated sites. Keep source/config rollback, but restore Basic Auth BEFORE reverting to a legacy application without ownership checks. Do not delete runtime to roll back. Do not run broad test suites against production data.
+
+Browser tests are in `tests/browser/`; provide playwright-core through NODE_PATH, CHROME_PATH if needed, a synthetic VIDEO_FIXTURE, and TEST_URL for private-export.cjs. Export-test password and traces stay local. These tests emulate mobile dimensions; they do not certify physical WeChat/Safari behavior.

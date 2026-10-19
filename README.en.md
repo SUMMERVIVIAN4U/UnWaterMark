@@ -65,4 +65,4 @@ Contact [SUMMERVIVIAN4U](https://github.com/SUMMERVIVIAN4U) for commercial inqui
 
 Independently developed; not affiliated with any online service of the same name.
 
-For a password-protected shared trial, see [deployment notes](deploy/README.md). Hosted mode uploads footage to the server and shares the workspace among invited users. Terminal jobs expire after 24 hours; local mode does not enable automatic cleanup.
+For a registration-free trial, see [deployment notes](deploy/README.md). Each browser has private records; a shared export password unlocks only its own full results. Locked previews are short and visibly marked. Processing happens on the server; terminal jobs expire after 24 hours. Changing browsers or clearing site data loses access. Local mode requires no password and does not enable automatic cleanup.

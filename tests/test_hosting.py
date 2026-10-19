@@ -1,13 +1,25 @@
 import sys,subprocess
 from pathlib import Path
 import pytest
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient as BaseClient
+import json
+
+class TestClient(BaseClient):
+    __test__=False
+    def __enter__(self):
+        super().__enter__();self.headers['x-csrf-token']=self.get('/api/session').json()['csrf'];return self
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+from app.sessions import password_record,COOKIE
 
 def app(tmp_path,monkeypatch):
     monkeypatch.setenv('VIDEO_REMOVER_HOSTED','1')
     monkeypatch.setenv('VIDEO_REMOVER_HOST','unwatermark.example.com')
     from app.server import create_app
+    tmp_path.mkdir(parents=True,exist_ok=True)
+    password=tmp_path/'test-password.json';password.write_text(json.dumps(password_record('test-only-password')))
+    monkeypatch.setenv('VIDEO_REMOVER_EXPORT_PASSWORD_FILE',str(password))
+    # Storage admission is tested separately; other policy tests must not depend on developer disk free space.
+    monkeypatch.setattr('app.hosting.HostingPolicy.check_storage',lambda *a:None)
     return create_app(tmp_path)
 
 def test_hosted_host_origin_capabilities_and_engine(tmp_path,monkeypatch):
@@ -39,7 +51,7 @@ def test_hosted_busy_and_retry_cannot_bypass(tmp_path,monkeypatch):
     with TestClient(app(tmp_path,monkeypatch),base_url='https://unwatermark.example.com') as c:
         mgr=c.app.state.jobs
         mgr.command_factory=lambda j:[sys.executable,'-c','import time;time.sleep(30)']
-        old=mgr.create('a'*32,'full',b'x',engine='propainter');mgr.cancel(old['id'])
+        old=mgr.create('a'*32,'full',b'x',engine='propainter',owner_id=c.app.state.sessions.get(c.cookies[COOKIE])['owner_id']);mgr.cancel(old['id'])
         r=c.post('/api/jobs/'+old['id']+'/retry');assert r.status_code==400 and '快速' in r.json()['detail']
         active=mgr.create('a'*32,'full',b'x',engine='fast')
         r=c.post('/api/uploads',files={'file':('a.mp4',b'x')});assert r.status_code==429
@@ -67,9 +79,9 @@ def test_legacy_upload_and_retry_cannot_bypass_hosted_bounds(tmp_path,monkeypatc
     with TestClient(app(tmp_path,monkeypatch),base_url='https://unwatermark.example.com') as c:
         c.app.state.jobs.command_factory=lambda j:[sys.executable,'-c','import time;time.sleep(30)']
         r=c.post('/api/jobs',data={'engine':'fast','mode':'full','upload_id':'a'*32},files={'mask':('mask.png',mask.getvalue())})
-        assert r.status_code==400
+        assert r.status_code==404
         old=c.app.state.jobs.create('a'*32,'full',mask.getvalue(),engine='fast');c.app.state.jobs.cancel(old['id'])
-        r=c.post('/api/jobs/'+old['id']+'/retry');assert r.status_code==400
+        r=c.post('/api/jobs/'+old['id']+'/retry');assert r.status_code==404
 
 @pytest.mark.parametrize('path',['/index.html/','/%2e/index.html'])
 def test_hosted_never_serves_raw_local_index(tmp_path,monkeypatch,path):

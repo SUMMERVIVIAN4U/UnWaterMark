@@ -57,14 +57,14 @@ class JobManager:
                 try:j.update(json.loads(stage.read_text()))
                 except (OSError,ValueError):pass
             return j
-    def create(self,upload_id,mode,mask,engine='propainter'):
+    def create(self,upload_id,mode,mask,engine='propainter',owner_id=None):
         if engine not in {'fast','propainter'}:raise ValueError('无效处理引擎')
         with self.lock:
             if self.stopped:raise ValueError('服务已关闭')
         id=uuid.uuid4().hex;p=self.root/'jobs'/id;p.mkdir()
         (p/'mask.png').write_bytes(mask)
         with self.lock:
-            self.items[id]=dict(id=id,upload_id=upload_id,mode=mode,engine=engine,status='queued',stage='queued',error=None,result_url=None,created_at=time.time(),updated_at=time.time())
+            self.items[id]=dict(id=id,owner_id=owner_id,upload_id=upload_id,mode=mode,engine=engine,status='queued',stage='queued',error=None,result_url=None,created_at=time.time(),updated_at=time.time())
             return self.update(id)
     def cancel(self,id):
         with self.lock:
@@ -75,7 +75,7 @@ class JobManager:
     def retry(self,id):
         j=self.get(id)
         if j['status'] not in ('failed','canceled'):raise ValueError('只有失败或取消的任务可以重试')
-        return self.create(j['upload_id'],j['mode'],(self.root/'jobs'/id/'mask.png').read_bytes(),engine=j.get('engine','propainter'))
+        return self.create(j['upload_id'],j['mode'],(self.root/'jobs'/id/'mask.png').read_bytes(),engine=j.get('engine','propainter'),owner_id=j.get('owner_id'))
     def _loop(self):
         while not self.stopped:
             with self.lock:
