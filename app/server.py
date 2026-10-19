@@ -188,6 +188,11 @@ def create_app(root=ROOT):
     if hosted.enabled:
         @app.get('/app.js',include_in_schema=False)
         def hosted_script():return FileResponse(BASE/'web/app.js',media_type='application/javascript')
+        @app.get('/export-contact.png',include_in_schema=False)
+        def export_contact():
+            path=Path(os.environ.get('VIDEO_REMOVER_EXPORT_CONTACT',root/'export-contact.png'))
+            if not path.is_file():raise HTTPException(404,'未配置联系二维码')
+            return FileResponse(path,media_type='image/png')
         @app.get('/style.css',include_in_schema=False)
         def hosted_style():return FileResponse(BASE/'web/style.css',media_type='text/css')
     elif (BASE/'web').exists():app.mount('/',StaticFiles(directory=BASE/'web',html=True),name='web')

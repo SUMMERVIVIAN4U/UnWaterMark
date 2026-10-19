@@ -9,7 +9,7 @@ const {chromium}=require('playwright-core');const assert=require('node:assert/st
   await page.goto(base);await page.waitForFunction(()=>csrf!==null);assert.equal((await a.request.get(base+'/api/jobs')).status(),200);
   await page.locator('#file-input').setInputFiles(process.env.VIDEO_FIXTURE);
   await page.waitForFunction(()=>upload&&previewReady,undefined,{polling:100});const uploadId=await page.evaluate(()=>upload.id);
-  await page.locator('#edit-mask').click();const box=await page.locator('#mask-canvas').boundingBox();
+  assert.equal(await page.locator('#edit-mask').count(),0);const box=await page.locator('#mask-canvas').boundingBox();
   await page.mouse.move(box.x+15,box.y+15);await page.mouse.down();await page.mouse.move(box.x+40,box.y+40);await page.mouse.up();
   await page.locator('#submit-full').click();await page.waitForFunction(()=>job?.status==='succeeded'||job?.status==='failed',undefined,{polling:300});
   const job=await page.evaluate(()=>window.eval('job'));assert.equal(job.status,'succeeded',job.error);

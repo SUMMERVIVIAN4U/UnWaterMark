@@ -3,14 +3,14 @@ const {chromium}=require('playwright-core');const path=require('node:path'),asse
  const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
  const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await context.tracing.start({screenshots:true,snapshots:true});
  const page=await context.newPage();page.setDefaultTimeout(5000);const root=path.resolve(__dirname,'../../web');
- await page.route('http://poster.test/**',async route=>{const p=new URL(route.request().url()).pathname;if(p==='/api/jobs')return route.fulfill({json:{jobs:[]}});if(p==='/blocked.mp4')return new Promise(()=>{});if(p.includes('b'.repeat(32))&&p.endsWith('/poster'))return route.fulfill({status:404,body:'missing'});if(p.endsWith('/poster'))return route.fulfill({path:process.env.POSTER_FIXTURE});return route.fulfill({path:path.join(root,p==='/'?'index.html':p.slice(1))});});
+ await page.route('http://poster.test/**',async route=>{const p=new URL(route.request().url()).pathname;if(p==='/export-contact.png')return route.fulfill({status:404,body:'optional'});if(p==='/api/jobs')return route.fulfill({json:{jobs:[]}});if(p==='/blocked.mp4')return new Promise(()=>{});if(p.includes('b'.repeat(32))&&p.endsWith('/poster'))return route.fulfill({status:404,body:'missing'});if(p.endsWith('/poster'))return route.fulfill({path:process.env.POSTER_FIXTURE});return route.fulfill({path:path.join(root,p==='/'?'index.html':p.slice(1))});});
  try{
   await page.goto('http://poster.test/');assert.equal(await page.locator('#source-poster').count(),1,'server frame fallback exists');
   await page.evaluate(()=>setUpload({id:'a'.repeat(32),url:'/blocked.mp4',name:'phone.mov',width:128,height:240,fps:24,duration:2}));
   await page.waitForFunction(()=>previewReady,undefined,{polling:100});
   assert.equal(await page.evaluate(()=>document.getElementById('source-video').readyState),0,'video deliberately unavailable');
   assert.ok(await page.locator('#source-poster').isVisible());
-  await page.locator('#edit-mask').click();const box=await page.locator('#mask-canvas').boundingBox();await page.mouse.move(box.x+20,box.y+20);await page.mouse.down();await page.mouse.move(box.x+60,box.y+60);await page.mouse.up();assert.equal(await page.evaluate(()=>hasMask()),true);
+  assert.equal(await page.locator('#edit-mask').count(),0);assert.equal(await page.locator('#preview-start').count(),0);assert.equal(await page.locator('#new-task').count(),0);assert.equal(await page.evaluate(()=>tool),'brush');const box=await page.locator('#mask-canvas').boundingBox();await page.mouse.move(box.x+20,box.y+20);await page.mouse.down();await page.mouse.move(box.x+60,box.y+60);await page.mouse.up();assert.equal(await page.evaluate(()=>hasMask()),true);
   // Stale first-frame must not remain over a selected later video frame.
   await page.evaluate(()=>{const v=document.getElementById('source-video');Object.defineProperty(v,'readyState',{get:()=>2});v.dispatchEvent(new Event('loadeddata'));});
   assert.equal(await page.locator('#source-poster').isVisible(),false);

@@ -1,6 +1,6 @@
 # Registration-free private browser trial
 
-Hosted mode uses server-side browser sessions: no registration or entrance password, only the current browser's uploads/jobs/media are accessible. A shared export password unlocks that browser's clean results for one hour. Before unlocking, users receive a marked, silent preview up to 3 seconds at 480 pixels maximum edge. This is an export gate, not DRM. Changing browser or clearing cookies loses access. A shared device/browser profile shares an identity; server operators retain disk access.
+Hosted mode uses server-side browser sessions: no registration or entrance password, only the current browser's uploads/jobs/media are accessible. A shared export password unlocks that browser's clean results for one hour. Before unlocking, users receive a marked, silent preview up to 10 seconds at 480 pixels maximum edge. This is an export gate, not DRM. Changing browser or clearing cookies loses access. A shared device/browser profile shares an identity; server operators retain disk access.
 
 Use a dedicated unprivileged account, a recent FFmpeg/FFprobe (8.1 tested), `requirements-server.txt` in a virtual environment and an immutable release at `/opt/unwatermark/current`. Keep Uvicorn on loopback, trust proxy headers only from loopback, and use TLS. The example domain/paths must be adapted. No Nginx Basic Auth is needed after the new application authorization is verified. HTTP only redirects to HTTPS or serves ACME challenges.
 
@@ -27,3 +27,5 @@ Terminal jobs expire 24 hours after completion/failure/cancellation, checked eve
 Upgrade behind the old Basic Auth protection first. Verify two independent HTTPS clients: public home, session issuance, upload, masked job, marked preview, wrong/correct export password, ownership checks on every endpoint and byte range. Then remove Basic Auth and recheck. Test exact host, CSRF, admission limits, output decode, TLS renewal and unrelated sites. Keep source/config rollback, but restore Basic Auth BEFORE reverting to a legacy application without ownership checks. Do not delete runtime to roll back. Do not run broad test suites against production data.
 
 Browser tests are in `tests/browser/`; provide playwright-core through NODE_PATH, CHROME_PATH if needed, a synthetic VIDEO_FIXTURE, and TEST_URL for private-export.cjs. Export-test password and traces stay local. These tests emulate mobile dimensions; they do not certify physical WeChat/Safari behavior.
+
+Optional contact QR: install your own image as `export-contact.png` under runtime (readable by the service), or configure `VIDEO_REMOVER_EXPORT_CONTACT`. It is served publicly for visitors to request an export code. Keep personal QR images outside the public source repository.
