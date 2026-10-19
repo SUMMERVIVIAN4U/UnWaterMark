@@ -125,6 +125,11 @@ def create_app(root=ROOT):
     @app.get('/api/uploads/{id}/video')
     def get_video(id:str,request:Request):
         m=upload(id,request);return FileResponse(root/'uploads'/id/m.get('working_file','video'),media_type='video/mp4')
+    @app.get('/api/uploads/{id}/poster')
+    def get_poster(id:str,request:Request):
+        m=upload(id,request)
+        from .preview import make_poster
+        return FileResponse(make_poster(root/'uploads'/id,m.get('working_file','video')),media_type='image/jpeg')
     @app.get('/api/uploads/{id}/original')
     def get_original(id:str,request:Request):
         m=upload(id,request);return FileResponse(root/'uploads'/id/'video',filename=m['name'])

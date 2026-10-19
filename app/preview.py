@@ -27,3 +27,20 @@ def make_preview(folder):
     except (subprocess.SubprocessError,OSError) as exc:
         raise HTTPException(503,'预览暂时无法生成，请稍后重试') from exc
     finally:_LOCK.release()
+
+_POSTER_LOCK=threading.Lock()
+def make_poster(folder,working_file):
+    """A plain image can load even when a mobile player defers all media loading."""
+    folder=Path(folder);output=folder/'source-poster-v1.jpg'
+    if output.is_file():return output
+    if not _POSTER_LOCK.acquire(timeout=3):raise HTTPException(429,'正在准备视频画面，请稍后重试')
+    try:
+        if output.is_file():return output
+        with tempfile.TemporaryDirectory(dir=folder,prefix='poster-') as temp:
+            target=Path(temp)/'frame.jpg'
+            subprocess.run(['ffmpeg','-v','error','-threads','1','-i',str(folder/working_file),'-map','0:v:0','-vf',"scale=w='min(960,iw)':h='min(960,ih)':force_original_aspect_ratio=decrease",'-frames:v','1','-threads','1','-q:v','2',str(target)],check=True,stderr=subprocess.PIPE,timeout=20)
+            target.replace(output)
+        return output
+    except (subprocess.SubprocessError,OSError) as exc:
+        raise HTTPException(503,'视频画面暂时无法生成，请点击加载重试') from exc
+    finally:_POSTER_LOCK.release()
